@@ -22,19 +22,31 @@ Spring的AOP实现是基于JVM的动态代理，即上述第三种方式。
 
 # 术语
 
-- Aspect：切面，即一个横跨多个核心逻辑的功能，或者称之为系统关注点；
-- Joinpoint：连接点，即定义在应用程序流程的何处插入切面的执行；
-- Pointcut：切入点，即一组连接点的集合；
-- Advice：增强，指特定连接点上执行的动作；
-- Introduction：引介，指为一个已有的Java对象动态地增加新的接口；
-- Weaving：织入，指将切面整合到程序的执行流程中；
+- Aspect：切面，也称为Advisor，即一个横跨多个核心逻辑的功能，或者称之为系统关注点；可以认为是增强、引入和切入点的组合；在Spring中可以使用Schema和@AspectJ方式进行组织实现；在AOP中表示为“在哪干和干什么集合”；
+- Joinpoint：连接点，表示需要在程序中插入横切关注点的扩展点，连接点可能是类初始化、方法执行、方法调用、字段调用或处理异常等等，Spring只支持方法执行作为连接点，在AOP中表示为“在哪里干”；
+- Pointcut：切入点，即一组连接点的集合；Spring支持perl5正则表达式和AspectJ切入点模式，Spring默认使用AspectJ语法，在AOP中表示为“在哪里干的集合”；
+- Advice：增强，指特定连接点上执行的动作；增强表示在连接点上执行的行为，增强提供了在AOP中需要在切入点所选择的连接点处进行扩展现有行为的手段；包括前置增强（before advice）、后置增强(after advice)、环绕增强（around advice），在Spring中通过代理模式实现AOP，并通过拦截器模式以环绕连接点的拦截器链织入增强；在AOP中表示为“干什么”；
+- Introduction：引介，指为一个已有的Java对象动态地增加新的接口；引介增强是一个比较特殊的增强，它不是在目标方法周围织入增强，而是为目标类创建新的方法或属性，所以引介增强的连接点是类级别的，而非方法级别的，Spring允许引入新的接口（必须对应一个实现）到所有被代理对象（目标对象）, 在AOP中表示为“干什么（引入什么）”；
+- Weaving：织入，织入是一个过程，是将切面应用到目标对象从而创建出AOP代理对象的过程，织入可以在编译期、类装载期、运行期进行。
 - Interceptor：拦截器，是一种实现增强的方式；
-- Target Object：目标对象，即真正执行业务的核心逻辑对象；
-- AOP Proxy：AOP代理，是客户端持有的增强后的对象引用。
+- Target Object：目标对象，即真正执行业务的核心逻辑对象；需要被织入横切关注点的对象，即该对象是切入点选择的对象，需要被增强的对象，从而也可称为“被增强对象”；由于Spring AOP 通过代理模式实现，从而这个对象永远是被代理对象，在AOP中表示为“对谁干”；
+- AOP Proxy：AOP代理，是客户端持有的增强后的对象引用。AOP框架使用代理模式创建的对象，从而实现在连接点处插入增强（即应用切面），就是通过代理来对目标对象应用切面。在Spring中，AOP代理可以用JDK动态代理或CGLIB代理实现，而通过拦截器模型应用切面。
+
+
+
+连接点和切入点的关系
+
+- 连接点（Join point）：连接点是在应用执行过程中能够插入切面（Aspect）的一个点。这些点可以是调用方法时、甚至修改一个字段时。
+- 切点（Pointcut）：切点是指通知（Advice）所要织入（Weaving）的具体位置。
+- 每个方法都是**连接点**，但是我们使用的那个方法才是**切点**。每个应用有多个位置适合织入通知，这些位置都是**连接点**。但是只有我们选择的那个具体的位置才是**切点**。
 
 
 
 # 实现
+
+实现AOP关键特点是定义好两个角色：切点 和 切面 。
+
+
 
 ## 依赖
 
@@ -50,6 +62,8 @@ Spring的AOP实现是基于JVM的动态代理，即上述第三种方式。
 ```
 
 
+
+### execution包名/类名匹配
 
 切面类LoggingAspect
 
@@ -127,7 +141,7 @@ public class LoggingAspect {
 
 
 
-目标类
+目标类WriterService
 
 ```java
 public class WriterService {
@@ -228,7 +242,156 @@ write book error
 
 
 
+### 注解实现AOP装配
+
+采用包/类名匹配的方式，是在目标类无感知的情况下进行了织入，容易误伤到其他类。
+
+于是，我们可以采用注解的方式，让目标类清楚的知道自己被安排了。
+
+
+
+注解MetricTime
+
+```java
+@Target(METHOD)
+@Retention(RUNTIME)
+public @interface MetricTime {
+
+    String value();
+}
+```
+
+
+
+切面类MetricAspect
+
+`@Around("@annotation(metricTime)")`，它的意思是，符合条件的目标方法是带有`@MetricTime`注解的方法。
+
+方法参数除了有ProceedingJoinPoint之外，还有是MetricTime，我们通过它获取注解的名称。
+
+```java
+@Aspect
+@Component
+public class MetricAspect {
+
+    @Around("@annotation(metricTime)")
+    public Object metricAround(ProceedingJoinPoint pjp, MetricTime metricTime) throws Throwable {
+        String name = metricTime.value();
+        long start = System.currentTimeMillis();
+        try {
+            return pjp.proceed();
+        } finally {
+            long end = System.currentTimeMillis();
+            long time = end - start;
+            System.out.println("[Metrics Around] " + name + ": " + time + "ms");
+        }
+    }
+}
+```
+
+
+
+目标类WriterService
+
+在需要织入的method上，标注该注解
+
+```java
+@Component
+public class WriterService {
+		
+  	// 监控writeAnnotation()方法性能
+    @MetricTime("write")
+    public void writeAnnotation() {
+        System.out.println("write book with annotation");
+    }
+}
+```
+
+
+
+配置类AopConfig
+
+```java
+@Configuration
+@EnableAspectJAutoProxy
+public class AopConfig {
+
+    // 业务逻辑类加入容器
+    @Bean
+    public WriterService writerService() {
+        return new WriterService();
+    }
+
+    // 切面类加入容器
+    @Bean
+    public MetricAspect metricAspect() {
+        return new MetricAspect();
+    }
+}
+```
+
+
+
+测试类
+
+```java
+public class TestAspect {
+
+    @Test
+    public void testWriterAspectAnotation() throws Exception {
+        AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(AopConfig.class);
+
+        WriterService writerService = applicationContext.getBean(WriterService.class);
+        writerService.writeAnnotation();
+
+        applicationContext.close();
+    }
+}
+```
+
+
+
+输出结果
+
+```
+write book with annotation
+[Metrics Around] write: 6ms
+```
+
+
+
+
+
 # 原理
+
+AOP的源码中用到了两种动态代理来实现拦截切入功能：JDK动态代理和CGLIB动态代理，两种方法同时存在，各有优劣。
+
+- JDK动态代理
+  - 是由java内部的反射机制来实现的，通过接口实现
+  - 有一定的局限性，JDK动态代理的应用前提，必须是委托类基于统一的接口。如果没有上述前提，jdk动态代理不能应用。
+- CGLIB动态代理
+  - 底层则是借助asm来实现的，通过生成新的子类，继承目标类。
+
+
+
+#### 使用场景
+
+- Spring对接口类型使用JDK动态代理，对普通类使用CGLIB创建子类。
+- 如果一个Bean的class是final，Spring将无法为其创建子类。
+
+
+
+#### 性能
+
+反射机制在生成类的过程中比较高效，执行时候通过反射调用委托类接口方法比较慢。
+
+而asm在生成类之后的相关代理类执行过程中比较高效（可以通过将asm生成的类进行缓存，这样解决asm生成类过程低效问题）。
+
+
+
+#### 结论
+
+CGLIB这种第三方类库实现的动态代理应用更加广泛，且在效率上更有优势。
 
 
 
@@ -238,20 +401,4 @@ https://blog.csdn.net/J080624/article/details/53695064
 
 https://www.liaoxuefeng.com/wiki/1252599548343744/1310052352786466
 
-
-
-AOP的源码中用到了两种动态代理来实现拦截切入功能：jdk动态代理和cglib动态代理。两种方法同时存在，各有优劣。
-
- jdk动态代理是由java内部的反射机制来实现的，cglib动态代理底层则是借助asm来实现的。
-
- 总的来说，反射机制在生成类的过程中比较高效，执行时候通过反射调用委托类接口方法比较慢；而asm在生成类之后的相关代理类执行过程中比较高效（可以通过将asm生成的类进行缓存，这样解决asm生成类过程低效问题）。
-
- 还有一点必须注意：jdk动态代理的应用前提，必须是委托类基于统一的接口。如果没有上述前提，jdk动态代理不能应用。
-
- 由此可以看出，jdk动态代理有一定的局限性，cglib这种第三方类库实现的动态代理应用更加广泛，且在效率上更有优势。
-
-
-
-实现AOP关键特点是定义好两个角色 切点 和 切面 。
-
- 代理模式中被代理类 委托类处于切点角色，需要添加的其他比如 校验逻辑，事务，审计逻辑 属于非功能实现逻辑通过 切面类定义的方法插入进去。
+https://www.liaoxuefeng.com/wiki/1252599548343744/1310052317134882
