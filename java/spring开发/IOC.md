@@ -93,7 +93,23 @@ IOC又被称为依赖注入（DI: dependency injection）
 
 
 
-### 2. 通过配置自动注入
+### 2. 通过注解自动注入
+
+```java
+@Component
+public class UserService {
+  	@Autowired
+    MailService mailService;
+
+    public UserService(@Autowired MailService mailService) {
+        this.mailService = mailService;
+    }
+    ...
+}
+```
+
+- `@Component`注解相当于定义了一个Bean，它有一个可选的名称，默认是`userService`，即小写开头的类名。
+- 使用`@Autowired`相当于把指定类型的Bean注入到指定的字段中。和XML配置相比，`@Autowired`大幅简化了注入，因为它不但可以写在`set()`方法上，还可以直接写在字段上，甚至可以写在构造方法中：
 
 
 
@@ -324,6 +340,219 @@ UserService userService = context.getBean(UserService.class);
 // 根据Bean的ID
 UserService userService1 = (UserService) context.getBean("userService");
 ```
+
+
+
+# 使用Annotation配置
+
+使用XML配置
+
+- 优点：所有Bean都能清除地列出来，并通过配置注入能直观地看到每个Bean的依赖
+- 缺点：写起来非常繁琐，每增加一个组件，就必须把新的Bean配置到XML中
+
+
+
+为了解决繁琐的问题，产生了更加简单的配置方式：Annotation配置。
+
+不需要XML，通过Annotiaon，让Spring自动扫描bean并且组装他们。
+
+
+
+使用Annotation配置自动扫描功能，能简化Spring的配置
+
+- 每个Bean需要被标注为`@Component`
+- 需要注入Bean的地方需要被标注为`@Autowired`
+- 配置类需要被标注为`@Configuration`和`@ComponentScan`
+- 所有Bean需要在指定的包或者子包内
+
+
+
+## @Component
+
+在Service类上添加`@Component`注解。
+
+`@Component`注解相当于定义了一个Bean，它有一个可选参数value，默认是小写开头的类名。
+
+
+
+在下面代码示例中，默认是`mailService`，即小写开头的类名。
+
+```java
+@Component
+public class MailService {
+  ...
+}
+```
+
+
+
+## @Autowired
+
+把Service类中需要做自动注入的字段，增加`@Autowired`注解。
+
+```java
+@Component
+public class UserService {
+
+    @Autowired
+    private MailService mailService;
+  
+  	...
+}
+```
+
+`@Autowired`相当于把指定类型的Bean注入到指定的字段中。
+
+
+
+`@Autowired`大幅简化了注入，它可以写在
+
+- `set()`方法上
+
+  - ```java
+    @Autowired
+    private MailService mailService;
+    ```
+
+- 字段上
+
+  - ```java
+    @Autowired
+    private MailService mailService;
+    ```
+
+- 构造方法中
+
+  - ```java
+    public UserService(@Autowired MailService mailService) {
+      	this.mailService = mailService;
+    }
+    ```
+
+
+
+通常我们把`@Autowired`注解写在字段上。
+
+
+
+## AppConfig类启动容器
+
+```java
+@Configuration
+@ComponentScan
+public class AppConfig {
+
+    public static void main(String[] args) {
+      	// 独立的应用上下文
+        // 创建Spring的IOC容器实例
+        // 接收带注解的类作为输入
+        // 让Spring容器创建并且装配好，配置文件中指定的所有的Bean
+        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+      
+        UserService userService = context.getBean(UserService.class);
+        userService.login();
+        userService.register();
+    }
+}
+```
+
+
+
+### 1. @Configuration
+
+`@Configuration`用于定义配置类，可以替换XML配置文件。
+
+
+
+`使用位置`
+
+@Configuration 作用于类上，相当于一个xml配置文件。
+
+
+
+`要求`
+
+- @Configuration不可以是final类型；
+- @Configuration不可以是匿名类；
+- 嵌套的configuration必须是静态类。
+- 被注解的类内部，需要一个或多个被@Bean注解的方法（@Bean 作用于方法上，相当于xml配置中的<bean>）
+
+
+
+### 2. @ComponentScan
+
+@ComponentScan告诉容器，自动搜索当前类所在的包以及子包，把所有标注为`@Component`的Bean自动创建出来，并且根据`@Autowired`进行装配。
+
+
+
+value参数，可以支持指定要扫描的包
+
+```java
+@ComponentScan(value = "io.mieux.controller")
+public class BeanConfig {
+
+}
+```
+
+
+
+excludeFilters 和 includeFilters参数，按规则排除/加入某些包的扫描
+
+```java
+@ComponentScan(value = "io.mieux",
+        excludeFilters = {@Filter(type = FilterType.ANNOTATION,
+        value = {Controller.class})})
+public class BeanConfig {
+
+}
+```
+
+excludeFilters 的参数是一个 Filter[] 数组
+
+- type：可以指定FilterType的类型，在这里是用的ANNOTATION，也就是通过注解来进行过滤
+- value：指定类名，在这里是Controller注解类
+
+配置之后，spring扫描时，会跳过io.mieux包下，所有被@Controller注解标注的类。
+
+
+
+ includeFilters ，按照规则只包含某些包的扫描
+
+```java
+@ComponentScan(value = "io.mieux", 
+        includeFilters = {@Filter(type = FilterType.ANNOTATION, classes = {Controller.class})},
+        useDefaultFilters = false)
+public class BeanConfig {
+
+}
+```
+
+用法和excludeFilters 一致。
+
+多了一个参数`useDefaultFilters`，默认是true也就是spring默认会自动发现`@Component`，`@Repository`，`@Service`，`@Controller`标准的类，并且注册进容器中。
+
+
+
+### 3. @AnnotationConfigApplicationContext
+
+
+
+在main函数中使用spring，有两个常见的高级容器
+
+- ClassPathXmlApplicationContext，基于classpath下的xml配置文件
+- AnnotationConfigApplicationContext，基于java配置文件
+
+
+
+
+
+`AnnotationConfigApplicationContext`是一个独立的应用上下文。
+
+- 它接收带注解的类作为输入，比如`@Configuration`或者`@Component`。
+
+- 他可以通过`scan`查找bean，也可以通过`register`注册bean。
+
+
 
 
 
