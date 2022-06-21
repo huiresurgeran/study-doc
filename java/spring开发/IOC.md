@@ -544,8 +544,6 @@ public class BeanConfig {
 
 
 
-
-
 `AnnotationConfigApplicationContext`是一个独立的应用上下文。
 
 - 它接收带注解的类作为输入，比如`@Configuration`或者`@Component`。
