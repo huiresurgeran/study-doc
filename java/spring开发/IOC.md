@@ -554,6 +554,430 @@ public class BeanConfig {
 
 
 
+# 创建自定义Bean
+
+## 1. @Component
+
+@Component是一个通用的Spring容器管理的**单例bean**组件。
+
+即容器初始化时创建Bean，容器关闭前销毁Bean。
+
+
+
+## 2. @scope
+
+@Scope注解是SpringIoc容器中的一个作用域
+
+- singleton，单例模式（默认值），基本作用域，全局有且仅有一个实例
+- prototype，原型模式，多例，基本作用域，每次获取Bean都会有一个新的实例
+- request，针对每一次HTTP请求都会产生一个新的bean，该bean仅在当前HTTP request内有效，Web作用域
+- session，针对每一次HTTP请求都会产生一个新的bean，该bean仅在当前HTTP session内有效，Web作用域
+- global session，类似于标准的HTTP Session作用域，不过仅仅在基于portlet的web应用中才有意义，Web作用域
+- 其他，自定义作用域
+
+
+
+每次调用`getBean(class)`，容器都能返回一个新的实例，这种Bean称为`Prototype（原型）`，他的生命周期和Singleton不同。
+
+声明一个Prototype的Bean时，需要加上`@Scope`注解
+
+```java
+@Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE) // @Scope("prototype")
+public class MailSession {
+    ...
+}
+```
+
+
+
+## 3. @Order
+
+我们可以通过`@Autowired`自动装配List结构。
+
+```java
+@Component
+public class Validators {
+    @Autowired
+    List<Validator> validators;
+}
+```
+
+Spring会把所有类型为`Validator`的Bean装配为一个List注入进来，这样只要每增加一个`Validator`类型，就自动被Spring装配到validators中。
+
+
+
+Spring是通过扫描classpath获取到所有的Bean，并且List是有序的，所以需要指定List中Bean的顺序的话，可以加上`@Order`注解。
+
+```java
+@Component
+@Order(1)
+public class EmailValidator implements Validator {
+    ...
+}
+```
+
+
+
+`@Order`注解，定义Spring IOC容器中Bean的**执行顺序的优先级**，而不是Bean的**加载顺序**。
+
+Bean的加载顺序不受`@Order`影响。
+
+默认最低优先级，值越小，优先级越高。
+
+
+
+## 4. @Autowired
+
+默认情况下，当我们使用`@Autowired`注解后，Spring如果没有找到对应类型的Bean，会抛出异常：`NoSuchBeanDefinitionException`。
+
+
+
+我们可以增加一个参数来控制异常的抛出`required = false`
+
+```java
+@Component
+public class MailService {
+    @Autowired(required = false)
+    ZoneId zoneId = ZoneId.systemDefault();
+    ...
+}
+```
+
+
+
+参数的含义：如果找到对应类型的Bean，就注入；如果找不到，就忽略。
+
+
+
+## 5. @Bean
+
+Spring对标记为`@Bean`的方法只调用一次，返回的Bean是单例。
+
+
+
+我们可以通过`@Bean`注解，创建第三方Bean。
+
+在`@Configuration类`中编写一个方法并返回他，同时给方法标记`@Bean`。
+
+```java
+@Configuration
+@ComponentScan
+public class AppConfig {
+		@Bean
+		ZoneId createZoneId() {
+				return ZoneId.of("Z");
+		}
+}
+```
+
+
+
+@Component和@Bean，都用来注册Bean并装配到Spring容器中
+
+- @Component，标注在类上，通常通过classpath扫描来自动检测以及自动装配到Spring容器中
+- @Bean，标注在方法上，在方法中定义产生这个bean的逻辑
+
+
+
+## 6.@PostConstruct/@PreDestroy
+
+调用构造方法创建实例后，即Bean被容器初始化后，会调用标记有`@PostConstruct`的方法，在Servlet的`init()`方法之前执行。
+
+实例销毁时，容器会先调用标记有`@PreDestroy`的方法，在Servlet的`destroy()`方法之前执行。
+
+
+
+## 7. 别名
+
+当我们需要对一种类型的Bean创建多个实例时，需要给每个Bean添加不同的名字。
+
+
+
+### @Bean指定别名
+
+用`@Bean("name")`指定别名
+
+```java
+/*** 初始化 ***/
+
+@Bean("z")
+ZoneId createZoneOfZ() {
+  	return ZoneId.of("Z");
+}
+
+/*** 注入 ***/
+
+@Autowired
+@Qualifier("z")
+private ZoneId zoneId;
+```
+
+
+
+### @Bean + @Qualifier
+
+用`@Bean + @Qualifier("name")`指定别名
+
+```java
+/*** 初始化 ***/
+
+@Bean
+@Qualifier("utc8")
+ZoneId createZoneOfUTC8() {
+		return ZoneId.of("UTC+08:00");
+}
+
+/*** 注入 ***/
+
+@Autowired
+@Qualifier("utc8")
+private ZoneId zoneId;
+```
+
+
+
+### @Primary
+
+可以把其中一个Bean指定为主要Bean。
+
+```java
+/*** 初始化 ***/
+
+@Bean
+@Primary // 指定为主要Bean
+@Qualifier("z")
+ZoneId createZoneOfZ() {
+		return ZoneId.of("Z");
+}
+
+@Bean
+@Qualifier("utc8")
+ZoneId createZoneOfUTC8() {
+		return ZoneId.of("UTC+08:00");
+}
+
+/*** 注入 ***/
+
+// 默认注入的是@Qualifier("z")的Bean
+@Autowired
+private ZoneId zoneId;
+
+// 指定注入的是@Qualifier("utc8")的Bean
+@Autowired
+@Qualifier("utc8")
+private ZoneId zoneId;
+```
+
+在注入时，如果没有特意说明Bean的名字，Spring会注入标记有`@Primary`的Bean。
+
+
+
+# 使用Resource
+
+不是annotation resource，是`org.springframework.core.io.Resource`。
+
+我们可以通过@Value注解，将配置文件、资源文件等直接注入进来。
+
+```java
+@Component
+public class AppService {
+    @Value("classpath:/logo.txt")
+    private Resource resource;
+}
+```
+
+注入Resource，最常用的方式是通过classpath。
+
+
+
+也可以直接指定文件的路径
+
+```java
+@Value("file:/path/to/logo.txt")
+private Resource resource;
+```
+
+
+
+# 注入配置
+
+
+
+## @PropertySource
+
+通过`@PropertySource`注解，自动读取配置文件。
+
+```java
+// 表示读取classpath的app.properties
+@PropertySource("app.properties") 
+public class AppConfig {
+}
+```
+
+
+
+使用：通过`@Value`注解注入对应的参数值
+
+```java
+@Value("${app.zone:Z}")
+String zoneId;
+```
+
+
+
+语法说明，`${key:defaultValue}`
+
+- `${app.zone:Z}`，表示读取key为`app.zone`的value，如果key不存在，使用默认值`Z`
+- `${app.zone}`，表示读取key为`app.zone`的value，如果key不存在，则会报错
+
+
+
+## JavaBean配置
+
+定义一个JavaBean，有所有的配置
+
+```java
+@Component
+public class SmtpConfig {
+    @Value("${smtp.host}")
+    private String host;
+  
+  	public String getHost() {
+        return host;
+    }
+}
+```
+
+
+
+在需要读取的地方，通过语法`#{bean.property}`注入
+
+```java
+@Component
+public class MailService {
+    @Value("#{smtpConfig.host}")
+    private String smtpHost;
+}
+```
+
+
+
+`#{}`，表示从JavaBean读取属性。
+
+`#{smtpConfig.host}`，表示从名称为`smtpConfig`的Bean中读取`host`属性。
+
+
+
+# 条件装配
+
+使用条件注解，能够更加灵活地装配Bean。
+
+
+
+## @Profile
+
+profile，用来表示不同的环境。
+
+创建Bean时，我们可以根据注解@Profile，决定是否创建。
+
+```java
+@Configuration
+@ComponentScan
+public class AppConfig {
+		@Bean
+		@Profile("!test")
+		ZoneId createZoneId() {
+				return ZoneId.systemDefault();
+		}
+		
+		@Bean
+		@Profile("test")
+		ZoneId createZoneIdForTest() {
+				return ZoneId.of("...")
+		}
+}
+```
+
+
+
+在运行程序时，加上JVM参数`-Dspring.profiles.active=test`，就可以指定以`test`环境启动程序。
+
+
+
+Spring也支持指定多个profile
+
+```
+-Dspring.profiles.active=test,dev
+```
+
+
+
+满足多个profile条件，需要这样写
+
+```java
+@Bean
+// profile是test或者dev
+@Profile("test", "dev")
+ZoneId createZoneId() {
+		return ZoneId.systemDefault();
+}	
+```
+
+
+
+## @Conditional
+
+
+
+### 1. 自定义
+
+```java
+@Component
+@Conditional(OnSmtpEnvCondition.class)
+public class SmtpMailService implements MailService {
+    ...
+}
+```
+
+满足`OnSmtpEnvCondition`条件，创建`SmtpMailService`
+
+
+
+### 2. @ConditionalOnProperty
+
+存在某个参数，并且参数为某个值，则创建bean
+
+```java
+@Component
+@ConditionalOnProperty(name="app.smtp", havingValue="true")
+public class MailService {
+    ...
+}
+```
+
+配置文件中存在`app.smtp=true`，则创建`MailService`
+
+
+
+### 3. @ConditionalOnClass
+
+当前classpath中存在某个类，则创建bean
+
+```java
+@Component
+@ConditionalOnClass(name = "javax.mail.Transport")
+public class MailService {
+    ...
+}
+```
+
+classpath中存在`javax.mail.Transport`类，则创建`MailService`
+
+
+
+
+
 
 
 # 参考文档
