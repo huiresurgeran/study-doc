@@ -884,24 +884,53 @@ profile，用来表示不同的环境。
 ```java
 @Configuration
 @ComponentScan
-public class AppConfig {
-		@Bean
-		@Profile("!test")
-		ZoneId createZoneId() {
-				return ZoneId.systemDefault();
-		}
-		
-		@Bean
-		@Profile("test")
-		ZoneId createZoneIdForTest() {
-				return ZoneId.of("...")
-		}
+public class ProfileConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(ProfileConfig.class);
+
+    @Bean
+    @Profile("!test")
+    ZoneId createZoneId() {
+        logger.info("createZoneId");
+        return ZoneId.systemDefault();
+    }
+
+    @Bean
+    @Profile("test")
+    ZoneId createZoneIdForTest() {
+        logger.info("createZoneIdForTest");
+        return ZoneId.of("America/New_York");
+    }
+
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext(ProfileConfig.class);
+    }
 }
 ```
 
 
 
 在运行程序时，加上JVM参数`-Dspring.profiles.active=test`，就可以指定以`test`环境启动程序。
+
+
+
+运行效果
+
+![image-20220621213301237](../../assets/images/image-20220621213301237.png)
+
+```
+21:30:14.793 [main] DEBUG org.springframework.context.annotation.AnnotationConfigApplicationContext - Refreshing org.springframework.context.annotation.AnnotationConfigApplicationContext@4361bd48
+21:30:14.809 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'org.springframework.context.annotation.internalConfigurationAnnotationProcessor'
+21:30:14.910 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'spring.profiles.active' in PropertySource 'systemProperties' with value of type String
+21:30:14.910 [main] DEBUG org.springframework.core.env.StandardEnvironment - Activating profiles [test]
+21:30:14.981 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'org.springframework.context.event.internalEventListenerProcessor'
+21:30:14.983 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'org.springframework.context.event.internalEventListenerFactory'
+21:30:14.984 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'org.springframework.context.annotation.internalAutowiredAnnotationProcessor'
+21:30:14.986 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'org.springframework.context.annotation.internalCommonAnnotationProcessor'
+21:30:14.992 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'profileConfig'
+21:30:14.997 [main] DEBUG org.springframework.beans.factory.support.DefaultListableBeanFactory - Creating shared instance of singleton bean 'createZoneIdForTest'
+21:30:15.009 [main] INFO com.jsamuel.study.ioc.profile.ProfileConfig - createZoneIdForTest
+```
 
 
 
