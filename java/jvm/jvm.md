@@ -771,3 +771,599 @@ G1收集器有四个阶段
 
 
 
+# 垃圾回收类型
+
+
+
+## Minor GC
+
+从年轻代空间回收内存，称为Minor GC，也叫做Young GC。
+
+- 当JVM无法为一个新的对象分配空间时，触发Minor GC，比如Eden区满了，所以Eden区越小，越频繁执行Minor GC
+- 当年轻代中的Eden区分配满时，年轻代中的部分对象会晋升到老年代，所以Minor GC后，老年代的占用量通常会有所升高
+- 对于大部分应用程序，停顿导致的延迟都是可以忽略不计的，因为大部分 Eden 区中的对象都能被认为是垃圾，永远也不会被复制到 Survivor 区或者老年代空间。
+
+
+
+## Major GC
+
+从老年代空间回收内存，被称为Major GC，也被称为Old GC。
+
+许多Major GC是由Minor GC触发的。
+
+
+
+1. 分配对象内存时发现内存不够，触发 Minor GC
+2. Minor GC 会将对象移到老年代中
+3. 如果此时老年代空间不够，那么触发 Major GC
+
+
+
+## Full GC
+
+Full GC是清理整个堆空间，包括年轻代，老年代，永久代。
+
+- 当要触发Minor GC时，如果发现年轻代的剩余空间，比以往晋升的空间小，不会触发Minor GC，会触发Full GC
+- 在永久代分配空间，但已经没有足够空间时，也会触发Full GC
+
+
+
+## Stop-The-World
+
+指在进行垃圾回收时因为标记或清理的需要，必须让所有执行任务的线程停止执行任务，从而让垃圾回收线程回收垃圾的时间间隔。
+
+在 Stop-The-World 这段时间里，所有非垃圾回收线程都无法工作，都暂停下来。只有等到垃圾回收线程工作完成才可以继续工作。
+
+Stop-The-World 时间的长短将关系到应用程序的响应时间，因此在 GC 过程中，Stop-The-World 的时间是一个非常重要的指标。
+
+
+
+
+
+# JVM参数
+
+
+
+## 堆栈空间配置
+
+
+
+### 堆空间
+
+`-Xms`：设置堆的初始空间大小
+
+`-Xmx`：设置堆的最大空间大小
+
+
+
+初始堆空间20M，最大堆空间30M
+
+`java -Xms20m -Xmx30m GCDemo`
+
+
+
+### 年轻代
+
+`-Xmn`：设置年轻代内存的大小
+
+老年代 = 堆大小 - 年轻代
+
+
+
+初始堆空间20M，年轻代空间10M，老年代空间10M
+
+`java -Xms20m -Xmn10m GCDemo`
+
+
+
+`-XX:+PrintGCDetails`：查看内存区域的分配信息
+
+
+
+### Eden区
+
+年轻代：eden空间，from空间，to空间
+
+
+
+`-XX：SurvivorRatio`：设置eden/from空间的比例关系，也等于eden/to
+
+
+
+### 永久区(jdk1.7)
+
+1.8之前，类信息都放在永久代中。
+
+
+
+`-XX:PermSize`：设置永久代初始大小
+
+`-XX:MaxPermSize`：设置永久代最大大小
+
+
+
+### 元空间(jdk1.8)
+
+JDK1.8之后，永久代被移除，改为了元空间，Metaspace。
+
+
+
+`-XX:MetaspaceSize`：元空间发生GC的初始阈值，默认20.8M
+
+`-XX:MaxMetaspaceSize`：设置元空间的最大大小，默认机器的物理内存大小
+
+
+
+### 栈空间
+
+栈空间是每个线程各自有的一块区域。
+
+栈空间太小，会导致StackOverFlow异常。
+
+
+
+`-Xss`：设置栈空间大小，最大栈空间为2M
+
+
+
+### 直接内存
+
+在JVM中的内存，但是却独立于JVM的堆内存。
+
+`-XX：MaxDirectMemorySize`：设置最大直接内存，不设置，默认为最大堆空间，即`-Xmx`。
+
+
+
+当直接内存使用达到设置值时，会触发垃圾回收。如果不能有效的释放足够的空间，会引发直接内存溢出导致系统的OOM。
+
+
+
+### 总结
+
+|          参数           |                   含义                    |
+| :---------------------: | :---------------------------------------: |
+|          -Xms           |                初始堆大小                 |
+|          -Xmx           |                最大堆空间                 |
+|          -Xmn           |              设置新生代大小               |
+|    -XX:SurvivorRatio    | 设置新生代eden空间和from/to空间的比例关系 |
+|      -XX:PermSize       |              方法区初始大小               |
+|     -XX:MaxPermSize     |              方法区最大大小               |
+|    -XX:MetaspaceSize    |          元空间GC阈值（JDK1.8）           |
+|  -XX:MaxMetaspaceSize   |         最大元空间大小（JDK1.8）          |
+|          -Xss           |                  栈大小                   |
+| -XX:MaxDirectMemorySize |      直接内存大小，默认为最大堆空间       |
+
+
+
+
+
+## 追踪类信息
+
+
+
+### 跟踪类的加载和卸载
+
+命令：`-verbose:class`
+
+`java -verbose:class com.tencent.fit.TestLogDemo`
+
+
+
+### 跟踪类的加载
+
+命令：`-XX:+TraceClassLoading`
+
+显示类的加载信息，输出结果和`-verbose:class`一样，但比其他减少了类的卸载信息。
+
+
+
+### 跟踪类的卸载
+
+命令：`-XX:+TraceClassUnloading`
+
+显示类的加载信息，输出结果和`-verbose:class`一样，但比其他减少了类的卸载信息。
+
+
+
+### 显示类信息柱状图
+
+命令：`-XX:+PrintClassHistogram`
+
+遇到Ctrl+Break后，打印类实例的柱状信息。
+
+
+
+### 总结
+
+|           参数           |        含义        |
+| :----------------------: | :----------------: |
+|      -verbose:class      | 跟踪类的加载和卸载 |
+|  -XX:+TraceClassLoading  |    跟踪类的加载    |
+| -XX:+TraceClassUnloading |    跟踪类的卸载    |
+| -XX:+PrintClassHistogram |  显示类信息柱状图  |
+
+
+
+## GC日志配置
+
+
+
+demo
+
+```java
+public class GCDemo {
+    private static final Logger logger = LoggerFactory.getLogger(GCDemo.class);
+
+    public static void main(String[] args) {
+        // allocate 4M space
+        byte[] b = new byte[4 * 1024 * 1024];
+        logger.info("first allocate");
+
+        // allocate 4M space
+        b = new byte[4 * 1024 * 1024];
+        logger.info("second allocate");
+
+    }
+}
+```
+
+
+
+启动参数
+
+```java
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC
+```
+
+
+
+启动参数说明：
+
+- `-XX:+UseSerialGc`： 强制使用Serial + SerialOld收集器组合
+- ` -Xms20M` ：堆空间初始大小20M
+- `-Xmx20M` ：堆空间最大大小20M
+- `-Xmn10M` ：新生代大小10M
+- `-XX:SurvivorRatio=8` ：Eden:Survivor=8:1
+- `-XX:+PrintGC` ：打印GC日志
+- `-XX:+PrintGCTimeStamps`：在GC日志前面加上时间戳，这个时间戳表示JVM启动后到现在所逝去的时间
+
+
+
+此时堆空间情况为
+
+- 新生代：10M
+  - Eden区: 8M
+  - FromSurvivor: 1M
+  - ToSurvivor: 1M
+- 老年代：10M
+
+
+
+### 打印GC日志
+
+-XX:+PrintGC
+
+```
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC
+```
+
+
+
+输出结果
+
+```
+[GC (Allocation Failure)  6112K->1210K(19456K), 0.0022019 secs]
+03:48:02.208 [main] INFO com.jsamuel.study.jvm.GCDemo - first allocate
+[GC (Allocation Failure)  5615K->5220K(19456K), 0.0046917 secs]
+03:48:02.216 [main] INFO com.jsamuel.study.jvm.GCDemo - second allocate
+```
+
+
+
+程序在第一次分配数组空间时，发生了GC，并且把GC前后以及堆空间大小打印了出来。
+
+6112K: GC前堆空间使用量，6M
+
+1210K: GC后堆空间使用量，1210K
+
+19456K: 当前可用堆大小为19456K
+
+
+
+### 打印详细GC日志
+
+ -XX:+PrintGCDetails 
+
+```
+// -XX:+PrintGCDetails, 打印详细GC日志
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGCDetails
+```
+
+
+
+输出结果
+
+```
+[GC (Allocation Failure) [DefNew: 6112K->1023K(9216K), 0.0023069 secs] 6112K->1209K(19456K), 0.0023321 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+03:54:11.659 [main] INFO com.jsamuel.study.jvm.GCDemo - first allocate
+[GC (Allocation Failure) [DefNew: 5511K->40K(9216K), 0.0040749 secs] 5697K->5220K(19456K), 0.0040952 secs] [Times: user=0.01 sys=0.00, real=0.00 secs] 
+03:54:11.667 [main] INFO com.jsamuel.study.jvm.GCDemo - second allocate
+Heap
+ def new generation   total 9216K, used 4374K [0x00000007bec00000, 0x00000007bf600000, 0x00000007bf600000)
+  eden space 8192K,  52% used [0x00000007bec00000, 0x00000007bf03b508, 0x00000007bf400000)
+  from space 1024K,   3% used [0x00000007bf400000, 0x00000007bf40a3b0, 0x00000007bf500000)
+  to   space 1024K,   0% used [0x00000007bf500000, 0x00000007bf500000, 0x00000007bf600000)
+ tenured generation   total 10240K, used 5179K [0x00000007bf600000, 0x00000007c0000000, 0x00000007c0000000)
+   the space 10240K,  50% used [0x00000007bf600000, 0x00000007bfb0ecd8, 0x00000007bfb0ee00, 0x00000007c0000000)
+ Metaspace       used 4805K, capacity 5064K, committed 5248K, reserved 1056768K
+  class space    used 538K, capacity 564K, committed 640K, reserved 1048576K
+```
+
+
+
+该参数能打印出更加详细的 GC 信息，包括：年轻代的信息、永久代的信息。
+
+`[DefNew: 6112K->1023K(9216K), 0.0023069 secs]`
+
+
+
+堆详细信息
+
+- def new generation，年轻代，总共9216K（8-9M），使用4374K（4-5M）
+
+  - eden space：8192K，8M，使用率52%
+
+  - from space：1024K，1M，使用率3%
+
+  - to   space：1024K，1M，使用率0
+
+- tenured generation，老年代，总共10240K（10M），使用5179K
+
+- Metaspace，元数据区
+
+  - used，加载的类占用的空间量，使用4805K
+  - capacity，当前分配块的元数据的空间，容量5064K
+  - committed，空间块的数量，5248K
+  - reserved，元数据的空间保留量，1056768K
+
+
+
+### 打印GC发生的时间
+
+-XX:+PrintGCTimeStamps，在每，次 GC 日志的前面加上一个时间戳，这个时间戳表示 JVM 启动后到现在所逝去的时间。
+
+```
+// -XX:+PrintGCTimeStamps, 在GC日志前面加上时间戳，这个时间戳表示JVM启动后到现在所逝去的时间
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC -XX:+PrintGCTimeStamps
+```
+
+
+
+输出结果
+
+```
+0.217: [GC (Allocation Failure)  6112K->1210K(19456K), 0.0025035 secs]
+04:07:46.525 [main] INFO com.jsamuel.study.jvm.GCDemo - first allocate
+0.226: [GC (Allocation Failure)  5615K->5220K(19456K), 0.0052913 secs]
+04:07:46.535 [main] INFO com.jsamuel.study.jvm.GCDemo - second allocate
+```
+
+
+
+[0.217]，就是该GC发生的时间
+
+
+
+### 打印应用程序的执行时间
+
+-XX:+PrintGCApplicationConcurrentTime
+
+```
+// -XX:+PrintGCApplicationConcurrentTime, 打印应用程序的执行时间
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC -XX:+PrintGCApplicationConcurrentTime
+```
+
+
+
+输出结果
+
+```
+Application time: 0.0833710 seconds
+[GC (Allocation Failure)  6112K->1209K(19456K), 0.0022693 secs]
+04:09:49.303 [main] INFO com.jsamuel.study.jvm.GCDemo - first allocate
+Application time: 0.0046984 seconds
+[GC (Allocation Failure)  5697K->5220K(19456K), 0.0040346 secs]
+04:09:49.310 [main] INFO com.jsamuel.study.jvm.GCDemo - second allocate
+Application time: 0.0006516 seconds
+```
+
+
+
+`Application time: 0.0833710 seconds`则是应用程序执行的时间
+
+
+
+### 打印应用由于GC而产生的停顿时间
+
+-XX:+PrintGCApplicationStoppedTime
+
+```
+// -XX:+PrintGCApplicationStoppedTime, 打印应用由于GC而产生停顿的时间
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC -XX:+PrintGCApplicationStoppedTime
+```
+
+
+
+输出结果
+
+```
+[GC (Allocation Failure)  6112K->1209K(19456K), 0.0027480 secs]
+Total time for which application threads were stopped: 0.0028901 seconds, Stopping threads took: 0.0000142 seconds
+04:11:03.434 [main] INFO com.jsamuel.study.jvm.GCDemo - first allocate
+[GC (Allocation Failure)  5697K->5220K(19456K), 0.0042218 secs]
+Total time for which application threads were stopped: 0.0042992 seconds, Stopping threads took: 0.0000111 seconds
+04:11:03.441 [main] INFO com.jsamuel.study.jvm.GCDemo - second allocate
+```
+
+
+
+`Total time`，暂停总时间
+
+`Stopping threads`，暂停线程耗时
+
+
+
+### 保存GC日志
+
+-Xloggc:gc.log，运行后本目录会生成一个gc.log文件
+
+```
+// -Xloggc, 保存GC日志
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC -Xloggc:gc.log
+```
+
+
+
+### 查看弱引用
+
+-XX:+PrintReferenceGC，它跟踪软引用、弱引用、虚引用和Finallize队列的信息，但是使用场景较为狭窄。
+
+```
+// -XX:+PrintReferenceGC, 查看弱引用
+-XX:+UseSerialGC -Xms20M -Xmx20M -Xmn10M -XX:SurvivorRatio=8 -XX:+PrintGC -XX:+PrintReferenceGC
+```
+
+
+
+### 总结
+
+| 参数                                  | 含义                                             |
+| :------------------------------------ | :----------------------------------------------- |
+| -XX:PrintGC                           | 打印GC日志                                       |
+| -XX:+PrintGCDetails                   | 打印详细的GC日志。还会在退出前打印堆的详细信息。 |
+| -XX:+PrintHeapAtGC                    | 每次GC前后打印堆信息。                           |
+| -XX:+PrintGCTimeStamps                | 打印GC发生的时间。                               |
+| -XX:+PrintGCApplicationConcurrentTime | 打印应用程序的执行时间                           |
+| -XX:+PrintGCApplicationStoppedTime    | 打印应用由于GC而产生的停顿时间                   |
+| -XX:+PrintReferenceGC                 | 跟踪软引用、弱引用、虚引用和Finallize队列。      |
+| -XLoggc                               | 将GC日志以文件形式输出。                         |
+
+
+
+# JDK性能监控命令
+
+
+
+## 查看虚拟机进程
+
+jps
+
+![image-20220625041605626](../../assets/images/image-20220625041605626.png)
+
+
+
+常用命令
+
+- -q，指定jps只输出进程ID
+- -m，输出传递给Java进程的参数
+- -l，输出主函数的完整路径
+- -v，显示传递给Java虚拟机的参数
+
+
+
+## 虚拟机统计信息
+
+jstat，用于观察 Java 堆信息的详细情况
+
+语法
+
+```
+jstat -<option> [-t] [-h<lines>] <vmid> [<interval>] [<count>]]
+```
+
+
+
+## 查看虚拟机参数
+
+jinfo，可以用来查看正在运行的 Java 应用程序的扩展参数，也支持在运行时，修改部分参数。
+
+语法：
+
+```
+jinfo <option> <pid>
+```
+
+
+
+查询`MaxGCPauseMillis`参数
+
+```
+jinfo -flag MaxGCPauseMillis 24173
+```
+
+![image-20220625042907756](../../assets/images/image-20220625042907756.png)
+
+
+
+## 导出堆到文件
+
+jmap，多功能命令
+
+- 可以生成 Java 程序的 Dump 文件
+- 可以查看堆内对象实例的统计信息
+- 查看 ClassLoader 的信息以及 finalizer 队列
+
+
+
+语法
+
+```
+jmap [option] vmid
+```
+
+
+
+## 堆分析工具
+
+jhat，用于分析 Java 应用的堆快照内存。
+
+Sun JDK 提供了 jhat 命令与 jmap 搭配使用，来分析 jmap 生成的堆转储快照。
+
+jhat 内置了一个微型的 HTTP/HTML 服务器，生成 dump 文件的分析结果后，可以在浏览器中查看。
+
+
+
+一般情况下不用 jhat 命令来分析 dump 文件：
+
+- 一般不会再部署应用的服务器上分析 dump 文件，分析工作是一个耗时而且消耗硬件资源的过程
+-  jhat 的分析功能还比较简陋，比起后面介绍的 VisualVM 等工具还差得很多
+
+
+
+## 查看线程堆栈
+
+jstack，用于导出 Java 应用程序的线程堆栈
+
+语法：
+
+```
+jstack [option] vmid
+```
+
+
+
+## 远程主机信息收集
+
+jstatd，用于收集远程主机信息。
+
+
+
+## 多功能命令行
+
+jcmd，jcmd 命令可以针对给定的 Java 虚拟机执行一条命令。
+
+
+
+## 性能统计工具
+
+hprof
