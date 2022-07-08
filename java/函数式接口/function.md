@@ -230,13 +230,151 @@ BooleanSupplier
 
 # Predicate（谓词性）
 
+谓词型接口，类似于bool类型判断的接口。
+
+
+
+## 实现Predicate方法
+
+
+
+### 1. 实现接口方法
+
+直接创建一个Predicate接口，实现test方法。
+
+test方法传入一个参数，返回一个bool值。
+
+接口的作用是判断。
+
+```java
+public static void interf() {
+    logger.info("--------interface--------");
+    Predicate<Integer> predicate = new Predicate<Integer>() {
+        @Override
+        public boolean test(Integer integer) {
+            if (integer > 100) {
+                return true;
+            }
+            return false;
+        }
+    };
+    logger.info("predicate.test(): {}", predicate.test(101));
+    logger.info("predicate.test(): {}", predicate.test(99));
+    logger.info("--------interface--------");
+}
+```
+
+
+
+### 2. lambda表达式
+
+lambda表达式返回值就是一个Predicate。
+
+```java
+public static void lambda() {
+    logger.info("--------lambda--------");
+    // lambda表达式返回的是一个Predicate接口
+    Predicate<Integer> predicate = (i) -> i > 100;
+    logger.info("predicate.test(): {}", predicate.test(101));
+    logger.info("predicate.test(): {}", predicate.test(99));
+    logger.info("--------lambda--------");
+}
+```
+
+
+
+输出
+
+```
+01:41:45.180 [main] INFO com.jsamuel.study.functional.interf.predicate.SimplePredicate - --------interface/lambda--------
+01:41:45.183 [main] INFO com.jsamuel.study.functional.interf.predicate.SimplePredicate - predicate.test(): true
+01:41:45.185 [main] INFO com.jsamuel.study.functional.interf.predicate.SimplePredicate - predicate.test(): false
+01:41:45.185 [main] INFO com.jsamuel.study.functional.interf.predicate.SimplePredicate - --------interface/lambda--------
+```
+
+
+
+## 其他实例
+
+创建predicate实例，实现test接口。
+
+test方法中进行判断。
+
+Stream的filter方法，需要Predicate类型参数。
+
+```java
+public static void interf() {
+    // predicate当做filter接口，判断
+    Predicate<Integer> predicate = new Predicate<Integer>() {
+        @Override
+        public boolean test(Integer integer) {
+            if (integer > 100) {
+                return true;
+            }
+            return false;
+        }
+    };
+
+    Stream<Integer> stream = Stream.of(1, 234, 34, 67, 457, 48);
+    List<Integer> list = stream.filter(predicate).collect(Collectors.toList());
+    list.forEach(System.out::println);
+}
+```
+
 
 
 
 
 # Function（功能型）
 
+功能型接口，转换作用，将输入的数据转换成另一种形式的输出数据。
 
+
+
+## 实现Function方法
+
+
+
+### 1. 实现接口方法
+
+直接创建一个Function接口，实现apply方法。
+
+泛型的第一个参数是转换前的类型，第二个参数是转换后的类型。
+
+apply接收一个参数，返回一个参数。
+
+
+
+Stream类的map方法，需要Function类型参数。
+
+```java
+public static void interf() {
+    logger.info("--------interface--------");
+  	// 第一个参数是转换前的类型，第二个参数是转换后的类型
+    Function<String, Integer> function = new Function<String, Integer>() {
+        @Override
+        public Integer apply(String str) {
+            return str.length();
+        }
+    };
+    Stream<String> stringStream = Stream.of("aaa", "bcbbddfds", "s");
+    Stream<Integer> integerStream = stringStream.map(function);
+    integerStream.forEach(System.out::println);
+    logger.info("--------interface--------");
+}
+```
+
+
+
+## 其他Function接口
+
+IntFunction
+
+DoubleFunction
+
+LongFunction
+
+...
 
 
 
