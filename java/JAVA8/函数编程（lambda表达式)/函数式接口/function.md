@@ -294,6 +294,29 @@ public static void lambda() {
 
 
 
+## 逻辑操作
+
+支持and，or，negate
+
+```java
+Predicate<String> predicate1 = s -> s.contains("a");
+
+Predicate<String> predicate2 = s -> s.contains("b");
+
+// and
+predicate1.and(predicate2).test("asd");
+
+// or
+predicate1.or(predicate2).test("asd");
+
+// negate, 非
+predicate.negate().test("asd");
+```
+
+
+
+
+
 ## 其他实例
 
 创建predicate实例，实现test接口。

@@ -25,6 +25,16 @@ Stream（流）是一个来自数据源的元素队列并支持聚合操作。
 
 
 
+stream由三部分组成：数据源，0-N个中间操作，0-1个终止操作。
+
+中间操作是lazy操作，不会立马启动，需要等待终止操作才会执行。
+
+终止操作是stream的启动操作，只有加上终止操作，stream才会开始执行。
+
+peek就是一个中间操作。
+
+
+
 # 模式
 
 顺序执行&并行执行。
@@ -282,7 +292,7 @@ public static void main(String[] args) {
 
 
 
-## flatMap - TODO
+## flatMap
 
 将多个stream连成一个stream
 
@@ -440,9 +450,32 @@ logger.info("count: {}", statistics.getCount());
 
 
 
-## peek - TODO
+## peek
 
+主要用于debug，是一个中间操作，参数是Consumer类型。
 
+可以只包含一个空的方法体，也可以写一些打印逻辑。
+
+用于验证中间结果是否正确，调试完需要删除。
+
+```java
+public static void main(String[] args) {
+    List<Person> list1 = new ArrayList<Person>();
+    list1.add(new Person(1L, "p1"));
+    list1.add(new Person(2L, "p2"));
+    list1.add(new Person(3L, "p3"));
+    list1.add(new Person(4L, "t4"));
+    list1.forEach(p -> logger.info("number: {}, str: {}", p.getN(), p.getS()));
+
+    List<Person> list2 = list1.stream()
+            .filter(f -> f.getS().startsWith("p"))
+            .peek(t -> {
+                logger.info("str: {}", t.getS());
+            })
+            .collect(Collectors.toList());
+    list2.forEach(p -> logger.info("number: {}, str: {}", p.getN(), p.getS()));
+}
+```
 
 
 
