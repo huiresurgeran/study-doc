@@ -195,6 +195,8 @@ LinkedList通过index检索数据，没有ArrayList效率高。
 
 FIFO的单向队列。
 
+是接口名字，继承自Collection接口。
+
 `常用方法`
 
 - peek：返回第一个元素，不移除；队列元素为空，返回null
@@ -204,6 +206,16 @@ FIFO的单向队列。
 - offer：在尾部加入元素，添加成功返回true；队列满，返回false
 - add：在尾部加入元素，添加成功返回true；队列满，抛出异常
 
+|         | Throws exception | Returns special value |
+| ------- | ---------------- | --------------------- |
+| Insert  | add(e)           | offer(e)              |
+| Remove  | remove()         | poll()                |
+| Examine | element()        | peek()                |
+
+
+
+使用队列时，首选ArrayDeque，其次是LinkedList。
+
 
 
 ### PriorityQueue
@@ -211,6 +223,41 @@ FIFO的单向队列。
 基于堆结构实现，可用于实现优先队列。
 
 也可以作为堆使用。
+
+
+
+`实现`
+
+通过堆实现。
+
+通过完全二叉树实现的小顶堆：任意一个非叶子节点的权值，都不大于其左右子节点的权值。
+
+底层实现是数组。
+
+![image-20220715012144858](../../assets/images/image-20220715012144858.png)
+
+
+
+`作用`
+
+保证每次取出的元素都是队列中权值最小的。
+
+元素大小的评判，可以通过元素本身的自然顺序，也可以通过构造时传入的比较器。
+
+
+
+`性能`
+
+- peek，element：常数时间
+- add，offer，无参数的remove，无参数的poll：log(N)
+
+
+
+
+
+`特点`
+
+不允许放入`null`元素
 
 
 
@@ -240,7 +287,9 @@ FIFO的单向队列。
 
 ### Deque
 
-双向队列。
+双向队列（Double ended queue）
+
+即可以当做栈使用，也可以当做队列使用。
 
 
 
@@ -255,13 +304,54 @@ FIFO的单向队列。
 - push：在头部插入元素，等同于addFirst，队列满会抛异常
 - pop：获取头部元素，移除，等同于removeFirst，队列为空会抛异常
 
+|         | First Element - Head |               | Last Element - Tail |               |
+| ------- | -------------------- | ------------- | ------------------- | ------------- |
+|         | Throws exception     | Special value | Throws exception    | Special value |
+| Insert  | addFirst(e)          | offerFirst(e) | addLast(e)          | offerLast(e)  |
+| Remove  | removeFirst()        | pollFirst()   | removeLast()        | pollLast()    |
+| Examine | getFirst()           | peekFirst()   | getLast()           | peekLast()    |
+
+
+
+ArrayDeque和LinkedList是Deque的两个通用实现。
+
+更推荐使用ArrayDeque。
+
 
 
 #### ArrayDeque
 
 无初始容量的双端队列。
 
+
+
+`实现`
+
+底层通过数组实现，并且是循环数组。
+
+head指向首端第一个有效元素。
+
+tail指向微端第一个可插入元素的空位。
+
+
+
+`性能`
+
 作为栈或者队列使用，栈的效率不如LinkedList。
+
+
+
+`特点`
+
+不允许放入`null`元素。
+
+
+
+`并发`
+
+非线程安全。
+
+多个线程同时使用，需要手动同步。
 
 
 
@@ -270,6 +360,20 @@ FIFO的单向队列。
 双向链表，可用于实现双向队列。
 
 作为栈或者队列使用，队列的效率不如ArrayDeque。
+
+
+
+## Stack
+
+Java不推荐使用Stack类，推荐使用更高效的ArrayDeque。
+
+
+
+`常用方法`
+
+- push，向栈顶插入元素，失败则抛出异常
+- pop，获取并删除栈顶元素，失败则抛出异常
+- peek，获取但不删除栈顶元素，失败则抛出异常
 
 
 
