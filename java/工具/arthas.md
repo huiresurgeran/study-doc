@@ -120,6 +120,8 @@ trace demo.MathGame run '#cost > 10'
 trace -E com.tencent.trpc.filter.fbp.FbpProviderFilter|com.tencent.trpc.filter.fbp.utils.LogUtils|com.tencent.trpc.filter.fbp.utils.Utils|com.tencent.trpc.proto.fbp.common.FbpServerCodec filter|getMdc|getLogConfig|getRequestInfo|getResponseInfo|getReqMsg|getProviderProtocol|getCustomReqMsg|getRetFromT|getMsgNoFromRequest|getLogConfig|getStatInfo|getDstServerInServer|getServerExt|getRetFromRequest|getMsgNoFromResponse|getCalleeRetFromResponse|pbToJson|decode|getStatInfo|setRouteTag --skipJDKMethod false
 
 trace -E com.tencent.trpc.filter.fbp.FbpConsumerFilter|com.tencent.trpc.filter.fbp.utils.LogUtils|com.tencent.trpc.filter.fbp.utils.Utils|com.tencent.trpc.proto.fbp.common.FbpClientCodec filter|getMdc|getLogConfig|getRequestInfo|getResponseInfo|getReqMsg|getConsumerProtocol|getRetFromT|getMsgNoFromRequest|getMsgNoFromResponse|getCallerRetFromResponse|pbToJson|decode|parseBackendErrors|transErrorCode --skipJDKMethod false
+
+trace -E com.tencent.trpc.transport.netty.NettyCodecAdapter|com.tencent.trpc.transport.netty.NettyClientHandler|com.tencent.trpc.proto.support.DefRpcClient|com.tencent.trpc.proto.fbp.common.FbpClientCodec decode|channelRead|received|received|process|handler|decodeResponseBody  --skipJDKMethod false
 ```
 
 
@@ -161,6 +163,42 @@ profiler stop --format html --file /data/home/totoroyang/arthas/output/output_v1
 默认情况下，结果文件是`html`格式，也可以用`--format`参数指定
 
 或者在`--file`参数里用文件名指名格式。比如`--file /tmp/result.html`
+
+
+
+# 监控
+
+monitor，非实时返回命令
+
+```
+monitor -c 5 com.tencent.trpc.filter.fbp.FbpProviderFilter filter
+
+monitor -c 5 com.tencent.trpc.proto.fbp.common.FbpServerCodec decode
+
+monitor -c 5 com.tencent.trpc.filter.fbp.FbpConsumerFilter filter
+
+monitor -c 5 com.tencent.trpc.proto.fbp.common.FbpClientCodec decode
+```
+
+
+
+## tt
+
+方法执行数据的时空隧道，记录下指定方法每次调用的入参和返回信息，并能对这些不同的时间下调用进行观测
+
+```
+tt -t com.tencent.trpc.filter.fbp.FbpProviderFilter filter
+tt -t com.tencent.trpc.proto.fbp.common.FbpServerCodec decode
+
+tt -t com.tencent.trpc.core.transport.AbstractClientTransport createChannel
+
+tt -t com.tencent.trpc.filter.fbp.FbpConsumerFilter filter
+tt -t com.tencent.trpc.proto.fbp.common.FbpClientCodec decode
+```
+
+
+
+java -jar arthas-boot.jar  --telnet-port 3659 --http-port -1
 
 
 
