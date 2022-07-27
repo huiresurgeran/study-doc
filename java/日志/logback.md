@@ -4,6 +4,50 @@
 
 
 
+# 日志格式
+
+```
+%d{yyyy-MM-dd HH:mm:ss.SSS}|%-5level|%X{tid}|%thread|%logger{36}.%M:%L-%msg%n
+```
+
+- %d{yyyy-MM-dd HH:mm:ss.SSS}，时间
+- `%-5level` ： 日志级别
+- `%X{tid}`： 自定义的分布式追踪ID
+- `%thread`： 线程
+- `%logger{36}.%M:%L` ：class的全名（36代表最长字符）.信息 行号
+- `%msg%n` ： 输出信息 换行
+
+
+
+```
+%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%10.10t]){faint} %clr(%-40.40logger{39}[%L]){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}
+```
+
+- %clr()，配置不同的颜色输出，支持的颜色有：blue，cyan，faint，green，magenta，red，yellow
+- %d{yyyy-MM-dd HH:mm:ss.SSS}，时间
+- %5p，日志级别
+- ${PID:- }，进程ID号
+- %clr(---){faint}，用"---"分隔符分开
+- [%10.10t]，线程名称，括在方括号中
+- %-40.40logger{39}，日志的名字，一般是类名，39代表最长字符
+- [%L]，行号
+- `%m%n` ： 输出信息 换行
+
+
+
+# springProfiler
+
+`<springProfile>`，读取spring.profiles.active设置的值，用于设置不同环境的不同逻辑
+
+- 固定值: `<springProfile name="dev">`，spring.profiles.active是dev时生效
+
+- 或: `<springProfile name="dev | test">`，spring.profiles.active是dev或者test时生效
+- 非: `<springProfile name="!dev">`，spring.profiles.active不是dev时生效
+
+
+
+
+
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
@@ -12,6 +56,9 @@ scanPeriod：检测配置文件是否有修改的时间间隔，如果没有给�
 debug：属性值为true时，打印出logback内部日志信息，实时查看logback运行状态，默认值为false
 -->
 <configuration scan="true" scanPeriod="60 second" debug="false">
+  	<!-- 彩色日志 -->
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
+  
     <!--属性-->
     <property name="CONSOLE_LOG_PATTERN" value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%10.10t]){faint} %clr(%-40.40logger{39}[%L]){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"></property>
 
@@ -133,3 +180,4 @@ Logback-file-appender.xml
 
 </included>
 ```
+
