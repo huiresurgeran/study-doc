@@ -17,7 +17,7 @@
 区别
 
 1. netty支持tcp+udp，fitnetty只支持tcp
-2. fitnetty区分busy，idle，destroy，用途？
+2. fitnetty区分busy，idle，destroy，用途 =》一问一答，不会多次调用用同一个连接
 3. fitnetty支持参数maxConns，connsNumber，保留channel-channelFuture map，用于软重启
 
 
