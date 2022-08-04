@@ -39,6 +39,12 @@ NIO：
 
 ## 通道
 
+被建立的一个应用程序和操作系统交互事件、传递内容的渠道(注意是连接到操作系统)。
+
+一个通道会有一个专属的文件状态描述符。
+
+
+
 channel是对I/O包中的流的模拟，可以通过channel读取和写入数据。
 
 
@@ -53,13 +59,15 @@ channel和stream的不同点
 channel包括的类型
 
 - FileChannel: 从文件中读写数据
-- DatagramChannel: 通过 UDP 读写网络中数据
-- SocketChannel: 通过 TCP 读写网络中数据
-- ServerSocketChannel: 可以监听新进来的 TCP 连接，对每一个新进来的连接都会创建一个 SocketChannel
+- DatagramChannel: UDP数据报文的监听通道，通过 UDP 读写网络中数据
+- SocketChannel: TCP Socket套接字的监听通道，通过 TCP 读写网络中数据，一个Socket套接字对应了一个客户端IP:端口 到 服务器IP:端口 的通信连接
+- ServerSocketChannel: 应用服务器程序的监听通道，可以监听新进来的 TCP 连接，对每一个新进来的连接都会创建一个 SocketChannel，只有通过这个通道，应用程序才能向操作系统注册支持“多路复用IO”的端口监听
 
 
 
 ## 缓冲区
+
+
 
 
 
@@ -99,13 +107,17 @@ channel包括的类型
 
 ### 缓冲区状态变量
 
--  capacity：最大容量
+- capacity：最大容量，在缓存区创建时指定
 - position：当前已经读写的字节数
 - limit：还可以读写的字节数
 
 
 
 # 选择器
+
+轮询代理期/事件订阅器
+
+
 
 NIO，常被叫做非阻塞IO，因为NIO在网络通信中的非阻塞特性被广泛使用。
 
@@ -120,6 +132,30 @@ NIO，实现了IO多路复用中的Reactor模型：一个线程thread，使用�
 
 
 ![image](https://pdai.tech/_images/pics/4d930e22-f493-49ae-8dff-ea21cd6895dc.png)
+
+
+
+## 功能
+
+
+
+### 事件订阅和channel管理
+
+应用程序会向selector对象注册需要他关注的channel，以及具体的某一个channel会对哪些IO事件感兴趣。
+
+selector中会维护一个 已经注册的channel 的容器。
+
+
+
+### 轮询代理
+
+应用层不再通过阻塞模式或者非阻塞模式直接询问操作系统“事件有没有发生”，而是由Selector代其询问。
+
+
+
+### 支持不同的操作系统
+
+多路复用IO技术 是需要操作系统进行支持的，其特点就是操作系统可以同时扫描同一个端口上不同网络连接的事件。
 
 
 
